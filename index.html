@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0E1420">
+  <meta name="description" content="Amneggsia: juego de memoria y ritmo en 3D. Proyecto académico Eggventure, desarrollado con Unity.">
+
+  <title>Amneggsia | Eggventure · Proyecto académico</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Fredoka para títulos (requisito del proyecto) + Inter para texto técnico legible -->
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ==========================================================
+       1. TOKENS — Paleta oscura con variación de pasteles
+       ========================================================== */
+    :root {
+      --bg:        #0E1420;
+      --bg-alt:    #111A29;
+      --surface:   #162132;
+      --surface-2: #1C293D;
+      --line:      rgba(255, 255, 255, .10);
+      --text:      #F2F5FA;
+      --muted:     #A7B3C6;
+
+      --mint:   #A7E8D2;
+      --peach:  #F3C3A7;
+      --lilac:  #C8BEF5;
+      --sky:    #A8CFED;
+      --butter: #F2D79A;
+      --coral:  #F2A3A3;
+
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 11px;
+      --shadow: 0 18px 50px rgba(0, 0, 0, .32);
+      --header-h: 70px;
+    }
+
+    /* ==========================================================
+       2. BASE (mobile-first)
+       ========================================================== */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: calc(var(--header-h) + 20px); }
+
+    body {
+      margin: 0; overflow-x: hidden;
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 1rem; line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, .brand, .btn, .eyebrow, kbd, .stat-value {
+      font-family: 'Fredoka', system-ui, sans-serif;
+    }
+    h1, h2, h3 { line-height: 1.15; margin: 0; letter-spacing: -.015em; }
+    p { margin: 0; }
+    ul, ol, dl, dd { margin: 0; padding: 0; }
+    ul, ol { list-style: none; }
+    a { color: inherit; }
+    button { font: inherit; }
+    img, svg { display: block; max-width: 100%; }
+
+    :focus-visible { outline: 2px solid var(--mint); outline-offset: 4px; border-radius: 6px; }
+    .container { width: min(calc(100% - 2rem), 1160px); margin-inline: auto; }
+    .icon { width: 1.05em; height: 1.05em; flex: 0 0 auto; vertical-align: -.14em; }
+    .sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+    .skip-link {
+      position: fixed; top: 8px; left: 8px; z-index: 200;
+      transform: translateY(-160%); background: var(--mint); color: var(--bg);
+      padding: .6rem 1rem; border-radius: 10px; font-weight: 700; text-decoration: none;
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    /* ==========================================================
+       3. COMPONENTES
+       ========================================================== */
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: .6rem;
+      color: var(--mint); font-family: 'Fredoka', sans-serif;
+      font-size: .76rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    }
+    .eyebrow::before {
+      content: ""; width: 7px; height: 7px; border-radius: 2px;
+      background: var(--mint); transform: rotate(45deg);
+    }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: .55rem;
+      min-height: 48px; padding: .65rem 1.35rem;
+      border: 1px solid transparent; border-radius: 10px;
+      font-size: .96rem; font-weight: 600; text-decoration: none; cursor: pointer;
+      transition: transform .22s ease, background .22s ease, border-color .22s ease, box-shadow .22s ease;
+    }
+    .btn-primary {
+      background: var(--mint); color: #0B111C;
+      box-shadow: 0 10px 28px rgba(167, 232, 210, .14);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(167, 232, 210, .22); }
+    .btn-ghost { background: rgba(255,255,255,.03); color: var(--text); border-color: var(--line); }
+    .btn-ghost:hover { transform: translateY(-2px); border-color: rgba(200,190,245,.5); background: rgba(200,190,245,.07); }
+
+    .section { padding: clamp(64px, 9vw, 104px) 0; }
+    .section--alt { background: var(--bg-alt); border-block: 1px solid var(--line); }
+    .section-head { max-width: 660px; margin: 0 auto 2.6rem; text-align: center; }
+    .section-head h2 { font-size: clamp(1.9rem, 4.6vw, 2.9rem); margin: .8rem 0 .6rem; }
+    .section-head p { color: var(--muted); }
+
+    .reveal {
+      opacity: 0; transform: translateY(22px);
+      transition: opacity .6s ease, transform .6s cubic-bezier(.2,.8,.2,1);
+      transition-delay: var(--delay, 0ms);
+    }
+    .reveal.is-visible { opacity: 1; transform: none; }
+
+    .tag {
+      display: inline-block; padding: .3rem .7rem; border: 1px solid var(--line);
+      border-radius: 999px; background: rgba(255,255,255,.025);
+      color: var(--muted); font-size: .82rem;
+    }
+
+    /* ==========================================================
+       4. HEADER
+       ========================================================== */
+    .site-header {
+      position: fixed; inset: 0 0 auto; z-index: 100;
+      background: rgba(14, 20, 32, .86);
+      -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--line);
+    }
+    .header-inner { min-height: var(--header-h); display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+    .brand { display: inline-flex; align-items: center; gap: .65rem; font-size: 1.12rem; font-weight: 700; text-decoration: none; letter-spacing: .01em; }
+    .brand-mark {
+      width: 22px; height: 28px; flex: 0 0 auto;
+      border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      background: linear-gradient(150deg, var(--mint), #6FB79F);
+      box-shadow: 0 0 18px rgba(167,232,210,.22);
+    }
+    .brand small { color: var(--muted); font-family: 'Inter', sans-serif; font-size: .75rem; font-weight: 500; }
+
+    .nav { display: none; gap: .2rem; }
+    .nav a {
+      display: block; padding: .45rem .85rem; border-radius: 8px;
+      color: var(--muted); font-size: .92rem; font-weight: 500; text-decoration: none;
+      transition: color .2s ease, background .2s ease;
+    }
+    .nav a:hover { color: var(--text); background: rgba(255,255,255,.05); }
+    .nav a.is-active { color: var(--mint); background: rgba(167,232,210,.09); }
+
+    .menu-toggle {
+      display: grid; place-items: center; gap: 5px; width: 44px; height: 44px; padding: 11px;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+      color: var(--text); cursor: pointer;
+    }
+    .menu-toggle span { display: block; width: 100%; height: 2px; background: currentColor; transition: transform .22s ease, opacity .2s ease; }
+    .menu-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+    .menu-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+    .menu-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+    .nav.is-open {
+      display: flex; position: absolute; top: var(--header-h); left: 0; right: 0;
+      flex-direction: column; padding: .8rem 1rem 1rem;
+      background: var(--bg-alt); border-bottom: 1px solid var(--line); box-shadow: var(--shadow);
+    }
+    .nav.is-open a { padding: .7rem .8rem; }
+    @media (min-width: 820px) {
+      .nav { display: flex; }
+      .menu-toggle { display: none; }
+      .nav.is-open { position: static; flex-direction: row; padding: 0; background: none; border: 0; box-shadow: none; }
+    }
+
+    /* ==========================================================
+       5. HERO
+       ========================================================== */
+    .hero {
+      position: relative; overflow: hidden;
+      padding: calc(var(--header-h) + 70px) 0 90px;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(200,190,245,.13), transparent 40%),
+        radial-gradient(circle at 92% 18%, rgba(167,232,210,.10), transparent 42%);
+    }
+    .hero::before {
+      content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .25;
+      background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 70px 70px;
+      -webkit-mask-image: linear-gradient(to bottom, #000, transparent 85%);
+      mask-image: linear-gradient(to bottom, #000, transparent 85%);
+    }
+    .hero-grid { position: relative; display: grid; gap: 2.5rem; align-items: center; }
+    .hero h1 { font-size: clamp(3.2rem, 10vw, 5.4rem); font-weight: 700; margin: 1rem 0 .7rem; letter-spacing: -.035em; }
+    .hero-subtitle { font-family: 'Fredoka', sans-serif; font-size: clamp(1.2rem, 2.6vw, 1.6rem); color: var(--peach); margin-bottom: 1rem; }
+    .hero-hook { max-width: 52ch; color: var(--muted); font-size: 1.05rem; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin-top: 1.8rem; }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.6rem; }
+
+    .art-frame {
+      position: relative; padding: 1.4rem; border: 1px solid var(--line);
+      border-radius: var(--radius-lg); background: rgba(22,33,50,.72);
+      box-shadow: var(--shadow); text-align: center;
+    }
+    .art-frame::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: radial-gradient(circle at 50% 45%, rgba(168,207,237,.12), transparent 62%);
+    }
+    .art-label, .art-foot {
+      position: relative; display: block; color: var(--muted);
+      font-size: .72rem; letter-spacing: .12em; text-transform: uppercase;
+    }
+    .art-frame img { position: relative; width: min(100%, 460px); margin: .8rem auto; }
+    @media (min-width: 900px) { .hero-grid { grid-template-columns: 1.02fr .98fr; gap: 4rem; } }
+
+    /* ==========================================================
+       6. JUEGO
+       ========================================================== */
+    .game-layout { display: grid; gap: 1.2rem; }
+    @media (min-width: 980px) { .game-layout { grid-template-columns: minmax(0, 1.7fr) minmax(290px, .82fr); align-items: start; } }
+
+    .game-card {
+      background: #0B111C; border: 1px solid var(--line);
+      border-radius: var(--radius-lg); padding: 12px; box-shadow: var(--shadow);
+    }
+    .game-toolbar { display: flex; align-items: center; gap: .7rem; flex-wrap: wrap; padding: .15rem .3rem .7rem; }
+    .dots { display: flex; gap: 6px; }
+    .dots i { width: 9px; height: 9px; border-radius: 50%; }
+    .dots i:nth-child(1) { background: var(--coral); }
+    .dots i:nth-child(2) { background: var(--butter); }
+    .dots i:nth-child(3) { background: var(--mint); }
+    .window-title { margin-right: auto; color: var(--muted); font-size: .8rem; letter-spacing: .04em; }
+    .btn-fullscreen {
+      display: inline-flex; align-items: center; gap: .4rem; min-height: 38px; padding: .3rem .75rem;
+      background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+      font-size: .82rem; cursor: pointer; transition: background .2s ease, border-color .2s ease;
+    }
+    .btn-fullscreen:hover { background: #253550; border-color: rgba(167,232,210,.35); }
+    .btn-fullscreen:disabled { opacity: .5; cursor: not-allowed; }
+
+    .game-stage {
+      position: relative; aspect-ratio: 16 / 9; overflow: hidden;
+      background: #070B12; border-radius: 14px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    /* REEMPLAZAR: ruta del build WebGL si tu exportación Unity está en otra carpeta */
+    .game-stage iframe { display: block; width: 100%; height: 100%; border: 0; background: #070B12; overflow: hidden; }
+    .game-stage:fullscreen { border-radius: 0; background: #000; }
+    .game-stage:fullscreen iframe { width: 100vw; height: 100vh; }
+    .game-note { margin: .7rem .3rem .1rem; color: var(--muted); font-size: .82rem; }
+    .game-note strong { color: var(--text); font-weight: 600; }
+
+    .fallback {
+      display: flex; gap: .75rem; margin-top: 1rem; padding: 1rem;
+      border: 1px solid rgba(243,195,167,.45); border-radius: var(--radius-md);
+      background: rgba(243,195,167,.07); color: var(--text);
+    }
+    .fallback[hidden] { display: none; }
+    .fallback .icon { color: var(--peach); width: 1.4rem; height: 1.4rem; }
+    .fallback strong { display: block; margin-bottom: .2rem; font-family: 'Fredoka', sans-serif; }
+    .fallback p { color: var(--muted); font-size: .9rem; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 1.5rem; }
+    .panel h3 { font-size: 1.4rem; }
+    .panel-sub { color: var(--muted); font-size: .9rem; margin-top: .25rem; }
+    .control-group + .control-group { margin-top: 1.3rem; padding-top: 1.2rem; border-top: 1px solid var(--line); }
+    .control-group h4 { margin: 0 0 .7rem; color: var(--lilac); font-size: .76rem; letter-spacing: .12em; text-transform: uppercase; }
+    .controls { display: grid; gap: .7rem; }
+    .controls li { display: flex; align-items: flex-start; gap: .75rem; font-size: .9rem; color: #DCE3EE; }
+    .keys { display: flex; flex-wrap: wrap; gap: 4px; flex: 0 0 92px; }
+    kbd {
+      display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 .35rem;
+      background: var(--surface-2); border: 1px solid rgba(167,232,210,.28);
+      border-bottom-width: 2px; border-radius: 7px; color: var(--mint);
+      font-size: .74rem; font-weight: 600;
+    }
+    .hint { margin-top: 1.3rem; padding: .8rem 1rem; border-left: 2px solid var(--mint); background: rgba(167,232,210,.06); border-radius: 0 8px 8px 0; font-size: .88rem; color: #C9D6E4; }
+
+    /* ==========================================================
+       7. TRÁILER
+       ========================================================== */
+    .trailer-grid { display: grid; gap: 2rem; align-items: center; }
+    @media (min-width: 980px) { .trailer-grid { grid-template-columns: minmax(0, 1.6fr) minmax(280px, .8fr); } }
+    .video-frame {
+      aspect-ratio: 16 / 9; overflow: hidden; background: #070B12;
+      border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow);
+    }
+    .video-frame iframe { width: 100%; height: 100%; border: 0; }
+    .trailer-info h3 { font-size: 1.5rem; margin-bottom: .6rem; }
+    .trailer-info p { color: var(--muted); font-size: .94rem; }
+    .spec-list { display: grid; gap: .55rem; margin-top: 1.1rem; }
+    .spec-list li { display: flex; align-items: center; gap: .6rem; font-size: .9rem; color: #DCE3EE; }
+    .check { display: grid; place-items: center; width: 24px; height: 24px; flex: 0 0 24px; border-radius: 6px; background: rgba(167,232,210,.12); color: var(--mint); font-size: .72rem; }
+    .credit-line { margin-top: 1.2rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .82rem; }
+
+    /* ==========================================================
+       8. GDD
+       ========================================================== */
+    .gdd-card {
+      position: relative; overflow: hidden; text-align: center; padding: clamp(2rem, 5vw, 3.4rem) 1.5rem;
+      border: 1px solid rgba(200,190,245,.28); border-radius: 28px;
+      background: linear-gradient(135deg, rgba(200,190,245,.13), rgba(167,232,210,.05) 55%, rgba(168,207,237,.08));
+    }
+    .gdd-card::after { content: ""; position: absolute; width: 260px; height: 260px; right: -110px; top: -130px; border-radius: 50%; background: rgba(200,190,245,.10); }
+    .gdd-card > * { position: relative; z-index: 1; }
+    .gdd-card h2 { font-size: clamp(1.8rem, 4.4vw, 2.7rem); margin: .8rem 0 .6rem; }
+    .gdd-card p { max-width: 58ch; margin-inline: auto; color: #C2CCDB; }
+    .gdd-chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .45rem; margin: 1.4rem 0 1.8rem; }
+    .btn-download { background: var(--lilac); color: #0B111C; min-height: 56px; padding-inline: 1.8rem; }
+    .btn-download:hover { transform: translateY(-2px); box-shadow: 0 16px 34px rgba(200,190,245,.18); }
+    .gdd-note { margin-top: 1rem !important; font-size: .82rem; color: var(--muted) !important; }
+
+    /* ==========================================================
+       9. SOBRE EL JUEGO
+       ========================================================== */
+    .block + .block { margin-top: 3.2rem; padding-top: 2.4rem; border-top: 1px solid var(--line); }
+    .block h3 { font-size: clamp(1.4rem, 3vw, 1.85rem); margin-bottom: .5rem; }
+    .block-intro { max-width: 70ch; color: var(--muted); }
+    .block-intro strong { color: var(--text); font-weight: 600; }
+
+    .grid-2 { display: grid; gap: 1rem; }
+    @media (min-width: 760px) { .grid-2 { grid-template-columns: repeat(2, 1fr); } }
+    .grid-3 { display: grid; gap: 1rem; }
+    @media (min-width: 700px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } }
+    .grid-4 { display: grid; gap: .8rem; }
+    @media (min-width: 620px)  { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1000px) { .grid-4 { grid-template-columns: repeat(4, 1fr); } }
+
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: 1.25rem; }
+    .card h4 { margin: 0 0 .45rem; font-family: 'Fredoka', sans-serif; font-size: 1.05rem; font-weight: 600; }
+    .card p, .card li { color: var(--muted); font-size: .9rem; }
+    .card li + li { margin-top: .35rem; }
+    .card-accent { height: 3px; width: 42px; border-radius: 3px; margin-bottom: 1rem; background: var(--mint); }
+    .accent-peach { background: var(--peach); }
+    .accent-lilac { background: var(--lilac); }
+
+    .stat { display: flex; align-items: baseline; gap: .5rem; margin: .8rem 0 .2rem; }
+    .stat-value { font-size: 1.7rem; color: var(--text); }
+    .stat-label { color: var(--muted); font-size: .82rem; }
+
+    .egg-card { display: flex; align-items: center; gap: .8rem; }
+    .egg-dot { width: 22px; height: 27px; flex: 0 0 22px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; border: 1px solid rgba(0,0,0,.4); }
+    .egg-card h4 { margin: 0 0 .1rem; }
+    .egg-card p { font-size: .82rem; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: .45rem; }
+    .specs { display: grid; gap: 0; border: 1px solid var(--line); border-radius: var(--radius-md); overflow: hidden; }
+    .spec-row { display: grid; gap: .2rem; padding: .85rem 1.1rem; background: var(--surface); }
+    .spec-row:nth-child(even) { background: var(--surface-2); }
+    @media (min-width: 760px) { .spec-row { grid-template-columns: 190px 1fr; gap: 1rem; } }
+    .spec-row dt { color: var(--muted); font-size: .78rem; letter-spacing: .06em; text-transform: uppercase; }
+    .spec-row dd { color: var(--text); font-size: .92rem; }
+
+    /* ==========================================================
+       10. EQUIPO, CRÉDITOS Y ESTADO
+       ========================================================== */
+    .person { display: flex; gap: 1rem; align-items: flex-start; }
+    .person-mark { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px; background: rgba(167,232,210,.12); color: var(--mint); font-family: 'Fredoka', sans-serif; font-weight: 700; }
+    .person--lilac .person-mark { background: rgba(200,190,245,.12); color: var(--lilac); }
+    .person h3 { margin: 0 0 .2rem; font-family: 'Fredoka', sans-serif; font-size: 1.05rem; }
+    .person p { color: var(--muted); font-size: .9rem; }
+    .facts { display: grid; gap: .6rem; margin-top: 1rem; }
+    .facts div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4rem; padding-bottom: .6rem; border-bottom: 1px solid var(--line); font-size: .9rem; }
+    .facts dt { color: var(--muted); }
+    .facts dd { color: var(--text); font-weight: 500; }
+
+    .progress-list { display: grid; gap: .7rem; }
+    .progress-list li { display: flex; align-items: flex-start; gap: .7rem; color: #DCE3EE; font-size: .92rem; }
+    .check { flex: 0 0 24px; }
+    .resources { display: grid; gap: 1rem; }
+    .resources .card p { margin-top: .35rem; }
+
+    /* ==========================================================
+       11. FOOTER
+       ========================================================== */
+    .site-footer { background: #0A0F18; border-top: 1px solid var(--line); padding: 3rem 0 1.5rem; }
+    .footer-grid { display: grid; gap: 2rem; }
+    @media (min-width: 760px) { .footer-grid { grid-template-columns: 1.4fr 1fr 1.2fr; } }
+    .site-footer h3 { color: var(--mint); font-size: 1rem; margin-bottom: .7rem; letter-spacing: .04em; }
+    .site-footer p, .site-footer li { color: var(--muted); font-size: .87rem; }
+    .site-footer li + li { margin-top: .3rem; }
+    .site-footer a { color: var(--lilac); text-decoration: none; }
+    .site-footer a:hover { text-decoration: underline; }
+    .footer-bottom { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .8rem; margin-top: 2rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: #7E8CA1; font-size: .82rem; }
+
+    /* ==========================================================
+       12. MOVIMIENTO REDUCIDO / SIN JS
+       ========================================================== */
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+      .reveal { opacity: 1 !important; transform: none !important; }
+    }
+  </style>
+  <noscript><style>.reveal { opacity: 1 !important; transform: none !important; }</style></noscript>
+</head>
+
+<body>
+  <a class="skip-link" href="#contenido">Saltar al contenido principal</a>
+
+  <svg class="sprite" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.2v13.6L20 12z" fill="currentColor"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 9l5 3-5 3z" fill="currentColor"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v11m0 0l-4-4m4 4l4-4" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-warning" viewBox="0 0 24 24"><path d="M12 3L2 20h20L12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="17" r="1.3" fill="currentColor"/></symbol>
+  </svg>
+
+  <!-- ===================== HEADER FIJO ===================== -->
+  <header class="site-header" id="top">
+    <div class="container header-inner">
+      <!-- REEMPLAZAR: nombre del proyecto (Eggventure) -->
+      <a class="brand" href="#inicio" aria-label="Eggventure / Amneggsia, ir al inicio">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Eggventure <small>/ Amneggsia</small></span>
+      </a>
+
+      <button class="menu-toggle" id="menuToggle" type="button"
+              aria-label="Abrir menú de navegación" aria-expanded="false" aria-controls="navPrincipal">
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="nav" id="navPrincipal" aria-label="Navegación principal">
+        <a href="#juego">Juego</a>
+        <a href="#trailer">Tráiler</a>
+        <a href="#gdd">GDD</a>
+        <a href="#equipo">Equipo</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="contenido">
+    <!-- ===================== HERO ===================== -->
+    <section class="hero" id="inicio" aria-labelledby="hero-title">
+      <div class="container hero-grid">
+        <div class="hero-copy reveal">
+          <p class="eyebrow">Eggventure · Proyecto académico</p>
+          <!-- REEMPLAZAR: título del juego disponible -->
+          <h1 id="hero-title">Amneggsia</h1>
+          <p class="hero-subtitle">Memoria y ritmo en 3D</p>
+          <p class="hero-hook">Cuatro huevitos repiten, turno tras turno, una secuencia de luces y sonidos que crece en cada ronda. Cada nota acertada suma un punto; un error termina la partida.</p>
+
+          <div class="hero-actions">
+            <a class="btn btn-primary" href="#juego">
+              <svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg>
+              Jugar ahora
+            </a>
+            <a class="btn btn-ghost" href="#trailer">
+              <svg class="icon" aria-hidden="true"><use href="#i-film"></use></svg>
+              Ver tráiler
+            </a>
+          </div>
+
+          <div class="hero-meta">
+            <span class="tag">Unity 6000.6.9f1 · URP</span>
+            <span class="tag">WebGL sin descargas</span>
+            <span class="tag">PC con teclado</span>
+          </div>
+        </div>
+
+        <div class="hero-art reveal" style="--delay: 100ms">
+          <div class="art-frame">
+            <span class="art-label">Los cuatro huevos</span>
+            <!-- REEMPLAZAR: arte de los personajes (assets/huevos-amneggsia.svg) -->
+            <img src="assets/huevos-amneggsia.svg"
+                 alt="Los cuatro huevos de Amneggsia: azul arriba, rojo abajo, verde a la izquierda y amarillo a la derecha"
+                 width="640" height="480">
+            <span class="art-foot">Arriba · Abajo · Izquierda · Derecha</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== JUEGO ===================== -->
+    <section class="section" id="juego" aria-labelledby="juego-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">01 · Jugar</p>
+          <h2 id="juego-title">Amneggsia en el navegador</h2>
+          <p>La versión WebGL se ejecuta en escritorio sin instalaciones. Observa la secuencia y repite el orden con el teclado.</p>
+        </div>
+
+        <div class="game-layout">
+          <div class="reveal">
+            <div class="game-card">
+              <div class="game-toolbar">
+                <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="window-title">AMNEGGSIA.WEBGL</span>
+                <button class="btn-fullscreen" id="btnFullscreen" type="button"
+                        aria-label="Pantalla completa: poner el juego a pantalla completa">
+                  <svg class="icon" aria-hidden="true"><use href="#i-expand"></use></svg>
+                  <span id="fsLabel">Pantalla completa</span>
+                </button>
+              </div>
+
+              <div class="game-stage" id="gameStage">
+                <!-- REEMPLAZAR: URL del build de Unity WebGL.
+                     Por defecto se espera la carpeta Build/ junto a este index.html. -->
+                     <iframe src="Build/index.html"
+                        title="Amneggsia: juego de memoria y ritmo en Unity WebGL"
+                        allow="fullscreen; gamepad; autoplay; clipboard-write"
+                        loading="eager"
+                        scrolling="no"></iframe>
+              </div>
+              <p class="game-note">Si no carga, verifica que la carpeta <strong>Build/</strong> esté junto a este archivo HTML.</p>
+            </div>
+
+            <!-- Se muestra solo si el navegador no soporta WebGL -->
+            <div class="fallback" id="webgl-fallback" role="status" hidden>
+              <svg class="icon" aria-hidden="true"><use href="#i-warning"></use></svg>
+              <div>
+                <strong>WebGL no disponible</strong>
+                <p>Usa una versión reciente de Chrome, Edge, Firefox o Safari con aceleración por hardware. Puedes revisar los controles y el tráiler mientras tanto.</p>
+              </div>
+            </div>
+            <span class="sr-only" id="gameStatus" aria-live="polite"></span>
+          </div>
+
+          <aside class="panel reveal" style="--delay: 110ms" aria-labelledby="controles-title">
+            <h3 id="controles-title">Instrucciones y controles</h3>
+            <p class="panel-sub">La máquina ilumina un huevo y suena. Repite el orden exacto.</p>
+
+            <div class="control-group">
+              <h4>Durante el juego</h4>
+              <ul class="controls">
+                <li><span class="keys" aria-hidden="true"><kbd>↑</kbd><kbd>W</kbd></span><span>Huevo <strong>azul</strong> (Borracho).</span></li>
+                <li><span class="keys" aria-hidden="true"><kbd>↓</kbd><kbd>S</kbd></span><span>Huevo <strong>rojo</strong> (Sensei).</span></li>
+                <li><span class="keys" aria-hidden="true"><kbd>←</kbd><kbd>A</kbd></span><span>Huevo <strong>verde</strong> (Chocolate).</span></li>
+                <li><span class="keys" aria-hidden="true"><kbd>→</kbd><kbd>D</kbd></span><span>Huevo <strong>amarillo</strong> (Confi).</span></li>
+                <li><span class="keys" aria-hidden="true"><kbd>P</kbd><kbd>Esc</kbd></span><span>Pausar la partida.</span></li>
+              </ul>
+            </div>
+
+            <div class="control-group">
+              <h4>En los menús</h4>
+              <ul class="controls">
+                <li><span class="keys" aria-hidden="true"><kbd>↑↓←→</kbd><kbd>WASD</kbd></span><span>Moverse entre opciones.</span></li>
+                <li><span class="keys" aria-hidden="true"><kbd>Enter</kbd><kbd>Esp</kbd><kbd>Num ↵</kbd></span><span>Confirmar.</span></li>
+                <li><span class="keys" aria-hidden="true"><kbd>Esc</kbd><kbd>Borrar</kbd></span><span>Regresar.</span></li>
+              </ul>
+            </div>
+
+            <div class="hint">Cada nota acertada suma 1 punto y reinicia el tiempo de la tecla. Una tecla equivocada o el tiempo agotado termina la partida.</div>
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== TRÁILER ===================== -->
+    <section class="section section--alt" id="trailer" aria-labelledby="trailer-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">02 · Tráiler</p>
+          <h2 id="trailer-title">Amneggsia en movimiento</h2>
+          <p>Video de 30 a 90 segundos, reproducido en la página sin descarga.</p>
+        </div>
+
+        <div class="trailer-grid">
+          <div class="video-frame reveal">
+            <!-- AQUÍ PEGA LA URL DEL TRÁILER -->
+            <!-- Sustituye VIDEO_ID por el ID real del video de YouTube (o usa <video src="trailer.mp4" controls>). -->
+            <iframe src="https://www.youtube.com/embed/VIDEO_ID"
+                    title="Tráiler de Amneggsia"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowfullscreen
+                    referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          </div>
+
+          <div class="trailer-info reveal" style="--delay: 110ms">
+            <h3>Secuencia, ritmo y puntaje</h3>
+            <p>El tráiler muestra la cocina 3D, la progresión de rondas y la pantalla final de puntaje. Los créditos de cierre incluyen al estudiante, el docente, el paralelo y la gestión.</p>
+            <ul class="spec-list">
+              <li><span class="check" aria-hidden="true">✓</span> Menús e instrucciones</li>
+              <li><span class="check" aria-hidden="true">✓</span> Dificultades y comidas decorativas</li>
+              <li><span class="check" aria-hidden="true">✓</span> Pantalla de puntaje final</li>
+            </ul>
+            <p class="credit-line">Créditos: Guzmán Choque Marco Antonio · Ing. Marco Avendaño Ajata · Paralelo “A” · Gestión II – 2026 · La Paz, 10 de agosto de 2026.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== GDD ===================== -->
+    <section class="section" id="gdd" aria-labelledby="gdd-title">
+      <div class="container">
+        <div class="gdd-card reveal">
+          <p class="eyebrow">03 · Documentación</p>
+          <h2 id="gdd-title">Game Design Document</h2>
+          <p>Documento final con mecánicas, reglas, progresión, personajes, escenario, ficha técnica y créditos de la versión entregada.</p>
+          <div class="gdd-chips">
+            <span class="tag">Mecánica</span><span class="tag">Reglas</span><span class="tag">Dificultades</span><span class="tag">Personajes</span><span class="tag">Ficha técnica</span>
+          </div>
+          <!-- REEMPLAZAR: ruta real del PDF del GDD final -->
+          <a href="GDD.pdf" download class="btn btn-download">
+            <svg class="icon" aria-hidden="true"><use href="#i-download"></use></svg>
+            Descargar GDD (PDF)
+          </a>
+          <p class="gdd-note">El enlace apunta a <code>GDD.pdf</code> en esta carpeta.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== SOBRE EL JUEGO ===================== -->
+    <section class="section section--alt" id="sobre" aria-labelledby="sobre-title">
+      <div class="container">
+        <div class="block reveal">
+          <p class="eyebrow">Sobre el juego</p>
+          <h2 id="sobre-title" style="font-size: clamp(1.9rem,4.6vw,2.9rem); margin-top:.8rem; margin-bottom:.6rem;">Memoria y ritmo en una cocina 3D</h2>
+          <p class="block-intro">Cuatro huevitos de una cocina repiten, turno tras turno, una secuencia de <strong>luces y sonidos</strong> que crece en cada ronda, hasta que el jugador se equivoca. Cada ronda agrega una nota más. El público objetivo es <strong>Valeria Mamani, 18 años</strong> (basada en la Player Persona): busca un pasatiempo rápido y desafiante, sin tutoriales largos y con una estética atractiva.</p>
+        </div>
+
+        <div class="block reveal">
+          <h3>Mecánica, reglas y condiciones</h3>
+          <p class="block-intro">La máquina ilumina un huevo y suena; el jugador debe presionar los huevos en el mismo orden.</p>
+          <div class="grid-2" style="margin-top:1.3rem;">
+            <article class="card">
+              <div class="card-accent" aria-hidden="true"></div>
+              <h4>Reglas</h4>
+              <ul>
+                <li>Cada nota acertada suma 1 punto y reinicia el tiempo límite de la tecla.</li>
+                <li>Una tecla equivocada o un tiempo agotado termina la partida.</li>
+                <li>Al completar una secuencia, la velocidad aumenta según la dificultad.</li>
+              </ul>
+            </article>
+            <article class="card">
+              <div class="card-accent accent-peach" aria-hidden="true"></div>
+              <h4>Victoria y derrota</h4>
+              <p style="margin-bottom:.7rem;"><strong style="color:var(--text)">No hay victoria final.</strong> El éxito se mide por la cantidad de notas acertadas: el puntaje.</p>
+              <p>Al pulsar una tecla equivocada o agotar el tiempo, los cuatro huevos gritan y se muestra la pantalla de puntaje final.</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="block reveal">
+          <h3>Progresión y dificultades</h3>
+          <p class="block-intro">La velocidad de la secuencia aumenta según el nivel elegido.</p>
+          <div class="grid-3" style="margin-top:1.3rem;">
+            <article class="card">
+              <div class="card-accent" aria-hidden="true"></div>
+              <h4>Tierno</h4>
+              <div class="stat"><span class="stat-value">0%</span><span class="stat-label">aumento de velocidad</span></div>
+              <p>10 segundos por tecla.</p>
+            </article>
+            <article class="card">
+              <div class="card-accent accent-peach" aria-hidden="true"></div>
+              <h4>Hervido</h4>
+              <div class="stat"><span class="stat-value">10%</span><span class="stat-label">aumento de velocidad</span></div>
+              <p>8 segundos por tecla.</p>
+            </article>
+            <article class="card">
+              <div class="card-accent accent-lilac" aria-hidden="true"></div>
+              <h4>Quemado</h4>
+              <div class="stat"><span class="stat-value">15%</span><span class="stat-label">aumento de velocidad</span></div>
+              <p>6 segundos por tecla. Aparecen comidas decorativas cruzando la pantalla.</p>
+            </article>
+          </div>
+        </div>
+
+        <div class="block reveal">
+          <h3>Personajes: los cuatro huevos</h3>
+          <p class="block-intro">Cada huevo responde a una dirección y tiene un color y una personalidad propios.</p>
+          <div class="grid-4" style="margin-top:1.3rem;">
+            <article class="card egg-card"><span class="egg-dot" style="background:#8FB8F5" aria-hidden="true"></span><div><h4>Arriba</h4><p>Borracho · Azul · ↑ / W</p></div></article>
+            <article class="card egg-card"><span class="egg-dot" style="background:#F2A3A3" aria-hidden="true"></span><div><h4>Abajo</h4><p>Sensei · Rojo · ↓ / S</p></div></article>
+            <article class="card egg-card"><span class="egg-dot" style="background:#A8D8B4" aria-hidden="true"></span><div><h4>Izquierda</h4><p>Chocolate · Verde · ← / A</p></div></article>
+            <article class="card egg-card"><span class="egg-dot" style="background:#F2D79A" aria-hidden="true"></span><div><h4>Derecha</h4><p>Confi · Amarillo · → / D</p></div></article>
+          </div>
+        </div>
+
+        <div class="block reveal">
+          <h3>Escenario: cocina 3D clara y cálida</h3>
+          <p class="block-intro">El espacio de juego se construye con elementos de cocina reconocibles y una iluminación cálida.</p>
+          <div class="chips" style="margin-top:1.2rem;">
+            <span class="tag">Mesón central</span><span class="tag">Tabla de cortar</span><span class="tag">Tazón</span><span class="tag">Pila de platos</span>
+            <span class="tag">Cucharas</span><span class="tag">Cuchillo</span><span class="tag">Sartén</span><span class="tag">Cafetera</span>
+            <span class="tag">Refrigerador</span><span class="tag">Microondas</span><span class="tag">Estufa</span><span class="tag">Fregadero</span>
+            <span class="tag">Plantas</span><span class="tag">Cartón de huevos</span><span class="tag">Frutero</span><span class="tag">Bloque de cuchillos</span>
+            <span class="tag">Papelera</span><span class="tag">Lámpara colgada</span>
+          </div>
+        </div>
+
+        <div class="block reveal">
+          <h3>Ficha técnica</h3>
+          <dl class="specs" style="margin-top:1.3rem;">
+            <div class="spec-row"><dt>Motor</dt><dd>Unity 6000.6.9f1</dd></div>
+            <div class="spec-row"><dt>Render</dt><dd>Universal Render Pipeline (URP)</dd></div>
+            <div class="spec-row"><dt>Lenguaje</dt><dd>C#</dd></div>
+            <div class="spec-row"><dt>Plataforma</dt><dd>PC con teclado y navegador web para esta entrega</dd></div>
+            <div class="spec-row"><dt>Resolución de referencia</dt><dd>1920 × 1080</dd></div>
+            <div class="spec-row"><dt>Interfaz</dt><dd>Unity UI (Canvas) con imágenes propias</dd></div>
+            <div class="spec-row"><dt>Audio</dt><dd>Sonidos de huevos en archivos de audio; sonidos de botones y música de ajustes generados por código</dd></div>
+            <div class="spec-row"><dt>Persistencia</dt><dd>PlayerPrefs para los ajustes</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== EQUIPO Y CRÉDITOS ===================== -->
+    <section class="section" id="equipo" aria-labelledby="equipo-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">04 · Equipo y créditos</p>
+          <h2 id="equipo-title">Responsables del proyecto</h2>
+          <p>Créditos académicos y técnicos de Amneggsia.</p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card person reveal">
+            <span class="person-mark" aria-hidden="true">GC</span>
+            <div>
+              <h3>Guzmán Choque Marco Antonio</h3>
+              <p>Estudiante · Desarrollo, modelado 3D, lógica, menús y HUD.</p>
+            </div>
+          </article>
+          <article class="card person person--lilac reveal" style="--delay: 90ms">
+            <span class="person-mark" aria-hidden="true">MA</span>
+            <div>
+              <h3>Ing. Marco Avendaño Ajata</h3>
+              <p>Docente del proyecto.</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="card reveal" style="margin-top:1.2rem;">
+          <dl class="facts">
+            <div><dt>Paralelo</dt><dd>“A”</dd></div>
+            <div><dt>Gestión</dt><dd>II – 2026</dd></div>
+            <div><dt>Universidad / Ubicación</dt><dd>La Paz, 10 de agosto de 2026</dd></div>
+            <div><dt>Entregable</dt><dd>Versión WebGL para navegador de escritorio</dd></div>
+          </dl>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================== RECURSOS Y ESTADO ===================== -->
+    <section class="section section--alt" id="estado" aria-labelledby="estado-title">
+      <div class="container">
+        <div class="section-head reveal">
+          <p class="eyebrow">05 · Producción</p>
+          <h2 id="estado-title">Recursos y estado del proyecto</h2>
+          <p>Relación fiel de los componentes integrados en la versión final y de las fuentes de los recursos.</p>
+        </div>
+
+        <div class="grid-2">
+          <article class="card reveal">
+            <div class="card-accent" aria-hidden="true"></div>
+            <h3>Integrado en la versión final</h3>
+            <ul class="progress-list" style="margin-top:1rem;">
+              <li><span class="check" aria-hidden="true">✓</span> Modelos 3D de los cuatro huevos.</li>
+              <li><span class="check" aria-hidden="true">✓</span> Pose de los huevos (pose T, con rig en Blender).</li>
+              <li><span class="check" aria-hidden="true">✓</span> Animaciones de nota y de derrota con Mixamo.</li>
+              <li><span class="check" aria-hidden="true">✓</span> Escena de la cocina.</li>
+              <li><span class="check" aria-hidden="true">✓</span> Portada y menús.</li>
+              <li><span class="check" aria-hidden="true">✓</span> Instrucciones, pausa y ajustes.</li>
+              <li><span class="check" aria-hidden="true">✓</span> Comidas decorativas.</li>
+              <li><span class="check" aria-hidden="true">✓</span> HUD y pantalla de puntaje final.</li>
+            </ul>
+          </article>
+
+          <div class="resources">
+            <article class="card reveal" style="--delay: 90ms">
+              <div class="card-accent accent-peach" aria-hidden="true"></div>
+              <h3>Recursos propios</h3>
+              <p>Modelos 3D de los cuatro huevos; imágenes de la interfaz (letras, números y símbolos); escena de la cocina; scripts de lógica; menús y HUD.</p>
+            </article>
+            <article class="card reveal" style="--delay: 150ms">
+              <div class="card-accent accent-lilac" aria-hidden="true"></div>
+              <h3>Recursos externos</h3>
+              <p>Archivos de audio con los sonidos de los huevos. Mixamo para las animaciones de nota y derrota.</p>
+            </article>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===================== FOOTER ===================== -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <h3>Eggventure</h3>
+          <p>Proyecto académico. Juego disponible: <strong style="color:var(--text)">Amneggsia</strong>, un juego de memoria y ritmo en 3D desarrollado con Unity y publicado en WebGL.</p>
+        </div>
+        <div>
+          <h3>Créditos académicos</h3>
+          <ul>
+            <li>Guzmán Choque Marco Antonio · Estudiante</li>
+            <li>Ing. Marco Avendaño Ajata · Docente</li>
+            <li>Paralelo “A” · Gestión II – 2026</li>
+            <li>La Paz, 10 de agosto de 2026</li>
+          </ul>
+        </div>
+        <div>
+          <h3>Recursos</h3>
+          <ul>
+            <li>Propios: modelos 3D, UI, cocina, scripts, menús y HUD.</li>
+            <li>Externos: sonidos de los huevos y animaciones con Mixamo.</li>
+            <li>Tipografías: Fredoka e Inter (Google Fonts).</li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 Eggventure · Amneggsia</span>
+        <a href="#top">Volver arriba ↑</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      'use strict';
+
+      /* ---------- Menú móvil ---------- */
+      var toggle = document.getElementById('menuToggle');
+      var nav = document.getElementById('navPrincipal');
+
+      function setMenu(abierto) {
+        nav.classList.toggle('is-open', abierto);
+        toggle.setAttribute('aria-expanded', String(abierto));
+        toggle.setAttribute('aria-label', abierto ? 'Cerrar menú de navegación' : 'Abrir menú de navegación');
+      }
+      toggle.addEventListener('click', function () { setMenu(toggle.getAttribute('aria-expanded') !== 'true'); });
+      nav.addEventListener('click', function (e) { if (e.target.closest('a')) setMenu(false); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMenu(false); });
+      window.addEventListener('resize', function () { if (window.innerWidth >= 820) setMenu(false); });
+
+      /* ---------- Fade-in al hacer scroll ---------- */
+      var reveals = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+      if ('IntersectionObserver' in window) {
+        var revealObserver = new IntersectionObserver(function (entries, observer) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) { entry.target.classList.add('is-visible'); observer.unobserve(entry.target); }
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+        reveals.forEach(function (el) { revealObserver.observe(el); });
+      } else {
+        reveals.forEach(function (el) { el.classList.add('is-visible'); });
+      }
+
+      /* Red de seguridad: revelar si el observador no dispara. */
+      var pendientes = reveals.length;
+      function revealAlDesplazarse() {
+        reveals.forEach(function (el) {
+          if (el.classList.contains('is-visible')) return;
+          var r = el.getBoundingClientRect();
+          if (r.top < window.innerHeight - 40 && r.bottom > 0) { el.classList.add('is-visible'); pendientes--; }
+        });
+        if (pendientes === 0) {
+          window.removeEventListener('scroll', revealAlDesplazarse);
+          window.removeEventListener('resize', revealAlDesplazarse);
+        }
+      }
+      window.addEventListener('scroll', revealAlDesplazarse, { passive: true });
+      window.addEventListener('resize', revealAlDesplazarse);
+      revealAlDesplazarse();
+
+      /* ---------- Enlace activo del menú ---------- */
+      if ('IntersectionObserver' in window) {
+        var navLinks = Array.prototype.slice.call(nav.querySelectorAll('a'));
+        var secciones = Array.prototype.slice.call(document.querySelectorAll('main section[id]'));
+        var navObserver = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              navLinks.forEach(function (a) { a.classList.toggle('is-active', a.getAttribute('href') === '#' + entry.target.id); });
+            }
+          });
+        }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+        secciones.forEach(function (s) { navObserver.observe(s); });
+      }
+
+      /* ---------- Fallback de WebGL ---------- */
+      function soportaWebGL() {
+        try {
+          var canvas = document.createElement('canvas');
+          return !!(window.WebGLRenderingContext && (canvas.getContext('webgl') || canvas.getContext('experimental-webgl')));
+        } catch (err) { return false; }
+      }
+      if (!soportaWebGL()) document.getElementById('webgl-fallback').hidden = false;
+
+      /* ---------- Pantalla completa ---------- */
+      var fsBtn = document.getElementById('btnFullscreen');
+      var fsLabel = document.getElementById('fsLabel');
+      var stage = document.getElementById('gameStage');
+      var status = document.getElementById('gameStatus');
+      function metodo(obj, nombres) {
+        for (var i = 0; i < nombres.length; i++) if (typeof obj[nombres[i]] === 'function') return nombres[i];
+        return null;
+      }
+      var entrar = metodo(stage, ['requestFullscreen', 'webkitRequestFullscreen', 'mozRequestFullScreen']);
+      if (!entrar) { fsBtn.disabled = true; fsBtn.title = 'Pantalla completa no disponible en este navegador'; }
+
+      function errorFullscreen() { status.textContent = 'No se pudo activar la pantalla completa.'; }
+
+      fsBtn.addEventListener('click', function () {
+        var doc = document;
+        var activo = doc.fullscreenElement || doc.webkitFullscreenElement || doc.mozFullScreenElement;
+        try {
+          if (activo) {
+            var salir = metodo(doc, ['exitFullscreen', 'webkitExitFullscreen', 'mozCancelFullScreen']);
+            if (salir) { var p1 = doc[salir](); if (p1 && p1.catch) p1.catch(errorFullscreen); }
+          } else if (entrar) {
+            var p2 = stage[entrar](); if (p2 && p2.catch) p2.catch(errorFullscreen);
+          }
+        } catch (err) { errorFullscreen(); }
+      });
+
+      function sincronizarBoton() {
+        var activo = !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement);
+        fsLabel.textContent = activo ? 'Salir de pantalla completa' : 'Pantalla completa';
+        fsBtn.setAttribute('aria-label', activo
+          ? 'Salir de pantalla completa: cerrar pantalla completa'
+          : 'Pantalla completa: poner el juego a pantalla completa');
+      }
+      document.addEventListener('fullscreenchange', sincronizarBoton);
+      document.addEventListener('webkitfullscreenchange', sincronizarBoton);
+      document.addEventListener('mozfullscreenchange', sincronizarBoton);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480" width="640" height="480">
+  <!-- Los cuatro huevos de Amneggsia, con su color y dirección de control. -->
+  <defs>
+    <symbol id="huevo" viewBox="0 0 120 150">
+      <path d="M60 6 C30 6 12 52 12 100 C12 128 32 146 60 146 C88 146 108 128 108 100 C108 52 90 6 60 6 Z"
+            fill="currentColor" stroke="#0B111C" stroke-width="5" stroke-linejoin="round"/>
+      <ellipse cx="38" cy="52" rx="10" ry="20" transform="rotate(-25 38 52)" fill="#FFFFFF" opacity="0.18"/>
+    </symbol>
+  </defs>
+
+  <circle cx="320" cy="240" r="92" fill="none" stroke="#FFFFFF" stroke-opacity="0.09" stroke-width="2" stroke-dasharray="3 9"/>
+  <circle cx="320" cy="240" r="8" fill="#FFFFFF" fill-opacity="0.22"/>
+
+  <use href="#huevo" x="260" y="20"  width="120" height="150" style="color:#8FB8F5"/>
+  <use href="#huevo" x="260" y="310" width="120" height="150" style="color:#F2A3A3"/>
+  <use href="#huevo" x="70"  y="165" width="120" height="150" style="color:#A8D8B4"/>
+  <use href="#huevo" x="450" y="165" width="120" height="150" style="color:#F2D79A"/>
+
+  <g fill="none" stroke="#F2F5FA" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" opacity="0.9">
+    <path d="M303 105 L320 88 L337 105"/>
+    <path d="M303 375 L320 392 L337 375"/>
+    <path d="M143 223 L126 240 L143 257"/>
+    <path d="M497 223 L514 240 L497 257"/>
+  </g>
+</svg>
